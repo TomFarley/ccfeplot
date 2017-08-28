@@ -1,28 +1,17 @@
-*~
-*.py[co]
+.directory
+.profile
+.idea/
+*__pycache__
+*.pyc
+*.log
+*.iml
+*.xml
+*.so
+*.txt
+*.data
+*.prof
+*.lprof
+*.png
+*.tmp
+*.p
 
-# Packages
-*.egg
-*.egg-info
-dist
-build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
-
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
-.coverage
-.tox
-
-#Translations
-*.mo
-
-#System Files
-Thumbs.db
