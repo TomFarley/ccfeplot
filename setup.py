@@ -5,7 +5,7 @@ import os
 import re
 import glob
 
-import easyplot
+import ccfeplot
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -13,14 +13,14 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
-import easyplot
+import ccfeplot
 setup(name='EasyPlot',
-      version=easyplot.__version__,
+      version=ccfeplot.__version__,
       description='A matplotlib wrapper for fast and easy generation of reusable plots',
       author='Sudeep Mandal',
       author_email='sudeepmandal@gmail.com',
-      url='https://github.com/HamsterHuey/easyplot',
-      packages=['easyplot'],
+      url='https://github.com/HamsterHuey/ccfeplot',
+      packages=['ccfeplot'],
       data_files = [('', ['LICENSE.txt']),
                     ('', ['DESCRIPTION.rst']),
                     ('', ['README.md']),
@@ -48,6 +48,6 @@ setup(name='EasyPlot',
           'Topic :: Utilities',
       ],
       long_description = long_description,
-      keywords='matplotlib wrapper plot easyplot',
+      keywords='matplotlib wrapper plot ccfeplot',
 
-    )
+      )

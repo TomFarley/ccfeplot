@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 """
 Author: Tom Farley, Sudeep Mandal
-Forked from easyplot by Sudeep Mandal: https://github.com/HamsterHuey/easyplot
+Forked from ccfeplot by Sudeep Mandal: https://github.com/HamsterHuey/ccfeplot
 """
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import numpy as np
+import sys
+import inspect
+import warnings
+from collections import OrderedDict
+
+string23 = str if sys.version_info > (3, 0) else basestring
 
 if not plt.isinteractive():
     print("\nMatplotlib interactive mode is currently OFF. It is "
@@ -18,8 +24,56 @@ class CcfePlot(object):
     """
     Class that implements thin matplotlib wrapper for easy, reusable plotting
     """
-                  
-    def __init__(self, *args, **kwargs):
+
+    _figure_defaults = {'figsize': None,
+                        'dpi': mpl.rcParams['figure.dpi'],
+                        'sharex': False,
+                        'sharey': False
+                        }
+
+    _legend_defaults = OrderedDict(loc='best',
+                                   fancybox=True,
+                                   framealpha=0.8,
+                                   numpoints=1,
+                                   ncol=1
+                                   )
+
+    _plot_defaults = OrderedDict(linestyle='-'
+                                 )
+
+    _other_defaults = OrderedDict(showlegend=True
+                                 )
+
+    # Dictionary of plot parameter aliases
+    _alias_dict = {'lw': 'linewidth', 'ls': 'linestyle',
+                       'mfc': 'markerfacecolor', 'mew': 'markeredgewidth',
+                       'mec': 'markeredgecolor', 'ms': 'markersize',
+                       'mev': 'markevery', 'c': 'color', 'fs': 'fontsize'}
+
+    # List of all named plot parameters passable to plot method
+    _line_attributes = ['label', 'linewidth', 'linestyle', 'marker',
+                             'markerfacecolor', 'markeredgewidth', 'markersize',
+                             'markeredgecolor', 'markevery', 'alpha', 'color']
+
+    _legend_attributes = ['fancybox', 'loc', 'framealpha', 'numpoints',
+                               'ncol', 'markerscale', 'mode', 'bbox_to_anchor']
+
+    # Parameters that should only be passed to the plot once, then reset
+    _uniqueparams = ['color', 'label', 'marker', 'linestyle',
+                          'colorcycle']
+
+    # Mapping between plot parameter and corresponding axes function to call
+    _ax_methods = {'xlabel': 'set_xlabel',
+                    'ylabel': 'set_ylabel',
+                    'xlim': 'set_xlim',
+                    'ylim': 'set_ylim',
+                    'title': 'set_title',
+                    'colorcycle': 'set_color_cycle',
+                    'grid': 'grid',
+                    'xscale': 'set_xscale',
+                    'yscale': 'set_yscale'}
+
+    def __init__(self, nrows=1, ncolumns=1, sharex=False, sharey=False, *args, **kwargs):
         """
         Arguments
         =========
@@ -76,104 +130,121 @@ class CcfePlot(object):
             bbox_to_anchor : The bbox that the legend will be anchored. Tuple of
                              2 or 4 floats
         """
-        self._default_kwargs = {'fig': None,
-                                'ax': None,
-                                'figsize': None,
-                                'dpi': mpl.rcParams['figure.dpi'],
-                                'showlegend': True,
-                                'fancybox': True,
-                                'loc': 'best',
-                                'numpoints': 1
-                               }
-        # Dictionary of plot parameter aliases               
-        self.alias_dict = {'lw': 'linewidth', 'ls': 'linestyle', 
-                           'mfc': 'markerfacecolor', 'mew': 'markeredgewidth', 
-                           'mec': 'markeredgecolor', 'ms': 'markersize',
-                           'mev': 'markevery', 'c': 'color', 'fs': 'fontsize'}
-        
-        # List of all named plot parameters passable to plot method                   
-        self._plot_kwargs = ['label', 'linewidth', 'linestyle', 'marker',
-                            'markerfacecolor', 'markeredgewidth', 'markersize',
-                            'markeredgecolor', 'markevery', 'alpha', 'color']
-        self._legend_kwargs = ['fancybox', 'loc', 'framealpha', 'numpoints',
-                              'ncol', 'markerscale', 'mode', 'bbox_to_anchor']
-        # Parameters that should only be passed to the plot once, then reset                 
-        self._uniqueparams = ['color', 'label', 'marker', 'linestyle',
-                              'colorcycle']
-        self._colorcycle = []
-        # Mapping between plot parameter and corresponding axes function to call                  
-        self._ax_funcs = {'xlabel': 'set_xlabel',
-                          'ylabel': 'set_ylabel',
-                          'xlim': 'set_xlim',
-                          'ylim': 'set_ylim',
-                          'title': 'set_title',
-                          'colorcycle': 'set_color_cycle',
-                          'grid': 'grid',
-                          'xscale': 'set_xscale',
-                          'yscale': 'set_yscale'}
-                         
-        self.kwargs = self._default_kwargs.copy() #Prevent mutating dictionary
-        self.args = []
-        self.line_list = [] # List of all Line2D items that are plotted
-        self.add_plot(*args, **kwargs)
+        self._1d_artists = []
+        self._2d_artists = []
+        self._3d_artists = []
+        self._legends = OrderedDict()
+        self._figure_settings = CcfePlot._figure_defaults.copy()
+        self._legend_settings = CcfePlot._legend_defaults.copy()
+        self._plot_settings_default = CcfePlot._plot_defaults.copy()
+        self._other_defaults = CcfePlot._other_defaults.copy()
 
-    def add_plot(self, *args, **kwargs):
+        for arg in args:
+            raise NotImplementedError
+
+        for key, value in kwargs.items():
+            if hasattr(plt.subplots, key):
+                self._figure_settings[key] = value
+            elif hasattr(plt.legend, key):
+                self._figure_settings[key] = value
+            elif hasattr(plt.plot, key):
+                self._plot_settings_default[key] = value
+            elif key in self._other_defaults:
+                self._other_defaults[key] = value
+
+
+        self._fig, self._axes = plt.subplots(nrows, ncolumns, squeeze=False, **self._figure_settings)
+
+        self._figure_settings['subplots'] = (nrows, ncolumns)
+
+        self._colorcycle = []
+
+        self.set_default_axis([0, 0])  # Default axis for plot calls
+
+        # self.kwargs = CcfePlot._figure_defaults.copy()  # Prevent mutating dictionary
+        # self.args = []
+        # self._line_list = []  # List of all Line2D items that are plotted
+        # self.add_line(*args, **kwargs)
+
+    def get_axis(self, ax):
+        if isinstance(ax, mpl.axes.Axes):
+            return ax
+        elif isinstance(ax, (list, tuple)):
+            return self._axes[ax[0]][ax[1]]
+        elif isinstance(ax, int):
+            raise NotImplementedError
+        else:
+            raise ValueError
+
+    def get_axis_index(self, ax):
+        for i in np.arange(self._figure_settings['subplots'][0]):
+            for j in np.arange(self._figure_settings['subplots'][1]):
+                if ax == self._axes[i,j]:
+                    return ax
+        return None
+
+    def set_default_axis(self, indices):
+        """Set default axis for plot calls
+
+        :indices: Tuple of axes indices in format (row, column)
+        """
+        if isinstance(indices, int):
+            raise NotImplementedError
+        ax = self.get_axis(indices)
+        self.default_ax = ax
+        plt.sca(ax)
+        return ax
+
+    def _update_legend(self, indices):
+        ax = self.get_axis(indices)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # Silence warning about no existing labels
+            leg = ax.legend(**self._legend_settings) if self._other_defaults['showlegend'] else None
+        if leg is not None:
+            leg.draggable(state=True)
+        self._legends[indices] = leg
+        return leg
+
+    def update_legends(self):
+        """Update legends on all axes"""
+        for i in np.arange(self._figure_settings['subplots'][0]):
+            for j in np.arange(self._figure_settings['subplots'][1]):
+                self._update_legend((i,j))
+        return self._legends
+
+    def plot(self, x, *args, ax='default', **kwargs):
         """
         Add plot using supplied parameters and existing instance parameters
         
         Creates new Figure and Axes object if 'fig' and 'ax' parameters not
         supplied. Stores references to all Line2D objects plotted in 
-        self.line_list. 
+        self.line_list.
+        Previously called add_plot
+
         Arguments
         =========
             *args : Supports format plot(y), plot(x, y), plot(x, y, 'b-'). x, y 
                     and format string are passed through for plotting
             **kwargs : Plot parameters. Refer to __init__ docstring for details
         """
-        self._update(*args, **kwargs)
+        if ax == 'default':
+            ax = self.default_ax
+        elif isinstance(ax, (tuple, list, int)):
+            ax = self.set_default_axis(ax)
+        ax_index = self.get_axis_index(ax)
 
-        # Create figure and axes if needed
-        if self.kwargs['fig'] is None:
-            if not self.isnewargs:
-                return # Don't create fig, ax yet if no x, y data provided
-            self.kwargs['fig'] = plt.figure(figsize=self.kwargs['figsize'], 
-                                            dpi=self.kwargs['dpi'])
-            self.kwargs['ax'] = self.kwargs['fig'].gca()
-            self.kwargs['fig'].add_axes(self.kwargs['ax'])
+        ax.ticklabel_format(useOffset=False)  # Prevent offset notation in plots
 
-        ax, fig = self.kwargs['ax'], self.kwargs['fig']
-        
-        ax.ticklabel_format(useOffset=False) # Prevent offset notation in plots
+        plot_settings = self._plot_settings_default.copy()
 
-        # Apply axes functions if present in kwargs
-        for kwarg in self.kwargs:
-            if kwarg in self._ax_funcs:
-                # eg: f = getattr(ax,'set_title'); f('new title')
-                func = getattr(ax, self._ax_funcs[kwarg])
-                func(self.kwargs[kwarg])
-        
-        # Add plot only if new args passed to this instance
-        if self.isnewargs:
-            # Create updated name, value dict to pass to plot method
-            plot_kwargs = {kwarg: self.kwargs[kwarg] for kwarg 
-                                in self._plot_kwargs if kwarg in self.kwargs}
-            
-            line, = ax.plot(*self.args, **plot_kwargs)
-            self.line_list.append(line)            
-          
-        # Display legend if required
-        if self.kwargs['showlegend']:
-            legend_kwargs = {kwarg: self.kwargs[kwarg] for kwarg 
-                                in self._legend_kwargs if kwarg in self.kwargs}
-            leg = ax.legend(**legend_kwargs)
-            if leg is not None:
-                leg.draggable(state=True)
-        
-        if 'fontsize' in self.kwargs:
-            self.set_fontsize(self.kwargs['fontsize'])
-            
-        self._delete_uniqueparams() # Clear unique parameters from kwargs list
-        
+        for key, value in kwargs.items():
+            if hasattr(plt.plot, key):
+                plot_settings[key] = value
+
+        ax.plot(x, *args, **plot_settings)
+
+        self._update_legend(ax)
+
         if plt.isinteractive(): # Only redraw canvas in interactive mode
             self.redraw()
           
@@ -185,7 +256,7 @@ class CcfePlot(object):
             # Update title and xlabel string and redraw plot
             a.update_plot(title='Title', xlabel='xlabel')
         """
-        self.add_plot(**kwargs)
+        self.plot(**kwargs)
         
     def new_plot(self, *args, **kwargs):
         """
@@ -198,11 +269,13 @@ class CcfePlot(object):
         self._reset(reset=reset)
         if self._colorcycle:
             self.kwargs['colorcycle'] = self._colorcycle
-        self.add_plot(*args, **kwargs)
+        self.plot(*args, **kwargs)
     
-    def iter_plot(self, x, y, mode='dict', **kwargs):
+    def add_lines(self, x, y, mode='dict', **kwargs):
         """
         Plot multiple plots by iterating through x, y and parameter lists
+
+        Previously called iter_plot
 
         Arguments:
         ==========
@@ -231,14 +304,14 @@ class CcfePlot(object):
                     x_loop = x[key]
                 except:
                     x_loop = x
-                self.add_plot(x_loop, y[key], **loop_kwargs)
+                self.plot(x_loop, y[key], **loop_kwargs)
 
         elif mode.lower() == 'array':
             for ind in range(len(y)):
                 loop_kwargs={}
                 for kwarg in kwargs:
                     # Do not iterate through tuple/string plot parameters
-                    if isinstance(kwargs[kwarg], (basestring, tuple)):
+                    if isinstance(kwargs[kwarg], (string23, tuple)):
                         loop_kwargs[kwarg] = kwargs[kwarg]
                     else:
                         try: # Check if parameter is a 1-D List/Array
@@ -249,7 +322,7 @@ class CcfePlot(object):
                     x_loop = x[ind][:]
                 except:
                     x_loop = x
-                self.add_plot(x_loop, y[ind], **loop_kwargs)
+                self.plot(x_loop, y[ind], **loop_kwargs)
         else:
             print('Error! Incorrect mode specification. Ignoring method call')
 
@@ -297,7 +370,7 @@ class CcfePlot(object):
         Redraw plot. Use after custom user modifications of axes & fig objects
         """
         if plt.isinteractive():
-            fig = self.kwargs['fig']
+            fig = self._fig
             #Redraw figure if it was previously closed prior to updating it
             if not plt.fignum_exists(fig.number):
                 fig.show()
@@ -366,8 +439,12 @@ class CcfePlot(object):
         reset: True if current instance defaults for plotting parameters should
                be reset to Class defaults"""
         self.args = []
-        self.line_list = []
+        self._line_list = []
         self.kwargs['fig'] = None
         self.kwargs['ax'] = None
         if reset:
-            self.kwargs = self._default_kwargs.copy()
+            self.kwargs = CcfePlot._figure_defaults.copy()
+
+def kws_filter(kwargs, func):
+    kws = {k: v for k, v in kwargs.items() if k in inspect.getargspec(func)[0]}
+    return kws

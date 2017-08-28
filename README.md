@@ -67,11 +67,11 @@ matplotlib.
 
 You can use the following commands to install EasyPlot:
 
-`pip install easyplot`
+`pip install ccfeplot`
 
 or
 
-`easy_install easyplot`
+`easy_install ccfeplot`
 
 Alternatively, you could download the package manually from the Python Package
 Index: https://pypi.python.org/pypi/EasyPlot, unzip it, navigate into the
@@ -118,7 +118,7 @@ code/notebook.
 
 Easyplot is my attempt to address these issues and make generating quick,
 pleasant looking, annotated plots a bit easier. In keeping with [DRY
-philosophy](http://en.wikipedia.org/wiki/Don%27t_repeat_yourself), `easyplot`
+philosophy](http://en.wikipedia.org/wiki/Don%27t_repeat_yourself), `ccfeplot`
 enables the creation of an `EasyPlot` object that maintains state information of
 all plot parameters passed to it in order to generate a plot. This can then be
 easily reused to generate new plots with the user only having to supply any
@@ -131,7 +131,7 @@ methods to access the figure and axes instance for the latest plot, enabling
 users to perform more custom plot modifications that are not directly supported
 by easyplot. It also supports interactive plotting where additional plot
 parameters can be passed to the current plot using the `update_plot` method. The
-plot above can be generated using `easyplot` as follows:
+plot above can be generated using `ccfeplot` as follows:
 ```python
 eplot = EasyPlot(x, x**2, 'b-o', label='y = x**2', showlegend=True,
                  xlabel='x', ylabel='y', title='title', grid='on')
@@ -274,7 +274,7 @@ the state of an `EasyPlot` object.
 `self.line_list` : A list of [`Line2D`](http://matplotlib.org/1.3.1/api/artist_a
 pi.html#matplotlib.lines.Line2D) items corresponding to all plots of the
 `EasyPlot` object. These can be manipulated using standard matplotlib methods
-outside of `easyplot` for [advaced plotting](#advanced_plotting).
+outside of `ccfeplot` for [advaced plotting](#advanced_plotting).
 
 <a name="plot_params"></a>
 
