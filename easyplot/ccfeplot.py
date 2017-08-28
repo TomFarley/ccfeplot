@@ -1,7 +1,10 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 """
-Author: Sudeep Mandal
+Author: Tom Farley, Sudeep Mandal
+Forked from easyplot by Sudeep Mandal: https://github.com/HamsterHuey/easyplot
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -11,7 +14,7 @@ if not plt.isinteractive():
           "recommended to use a suitable matplotlib backend and turn it "
           "on by calling matplotlib.pyplot.ion()\n")
 
-class EasyPlot(object):
+class CcfePlot(object):
     """
     Class that implements thin matplotlib wrapper for easy, reusable plotting
     """
@@ -77,7 +80,7 @@ class EasyPlot(object):
                                 'ax': None,
                                 'figsize': None,
                                 'dpi': mpl.rcParams['figure.dpi'],
-                                'showlegend': False,
+                                'showlegend': True,
                                 'fancybox': True,
                                 'loc': 'best',
                                 'numpoints': 1
